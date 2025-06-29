@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -39,16 +39,49 @@ async function run() {
     let parcelCollection = db.collection('parcels')
 
 
-    app.get('/parcels',async(req,res)=>{
-        let parcels = await parcelCollection.find().toArray();
-        res.send(parcels)
-    })
+    // app.get('/parcels',async(req,res)=>{
+    //     let parcels = await parcelCollection.find().toArray();
+    //     res.send(parcels)
+    // })
+
+    app.get("/parcels", async (req, res) => {
+  try {
+    const userEmail = req.query.email;
+    
+    const query = userEmail ? { userEmail: userEmail } : {}; // ✅ filter if email exists
+    const options = {
+      sort: { createdAt: -1 } // ✅ sort latest first
+    };
+
+    const parcels = await parcelCollection.find(query, options).toArray();
+    res.send(parcels);
+  } catch (err) {
+    console.error("❌ GET /parcels error:", err);
+    res.status(500).send({ error: "Failed to fetch parcels", message: err.message });
+  }
+});
+
 
     app.post("/parcels", async (req, res) => {
       const newParcel = req.body;
-      const result = await parcelsCollection.insertOne(newParcel);
+      const result = await parcelCollection.insertOne(newParcel);
       res.send(result);
     });
+    
+
+app.delete('/parcels/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await parcelCollection.deleteOne({ _id: new ObjectId(id) });
+
+   
+    res.send(result);
+  } catch (error) {
+    console.error('Error deleting parcel:', error);
+    res.status(500).send({ message: 'Internal server error' });
+  }
+});
+
     
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
